@@ -8,6 +8,8 @@ import type { CrateObject, Indexer } from './indexer/indexer.ts';
 import { SearchIndexer } from './indexer/search.ts';
 import { StructuralIndexer } from './indexer/structural.ts';
 import { PromiseQueue } from './utils.ts';
+import { State, type RepositoryFile } from './repository.ts';
+
 const crc32 = await createCRC32();
 
 const ocflConf = {
@@ -30,6 +32,7 @@ const { defaultLicense, defaultMetadataLicense } = config;
 const ocflPath = '/opt/storage/oni/ocfl';
 const ocflPathInternal = 'ocfl';
 
+let stateCache: { [key: string]: { [key: string]: (typeof State[keyof typeof State]) | undefined } } = {};
 let INDEXER: { [key: string]: Indexer };
 let repository: ReturnType<typeof ocfl.storage>;
 
@@ -70,7 +73,7 @@ export async function init(opts: any) {
   }
 }
 
-async function calculateCrc32(file) {
+async function calculateCrc32(file: RepositoryFile) {
   crc32.init();
   for await (const chunk of (await file.stream())) {
     crc32.update(chunk);
@@ -89,7 +92,7 @@ function wrap(ocflObject: OcflObject): CrateObject {
       if (!file) {
         throw new Error(`File not found in ocfl inventory: ${path}`);
       }
-      return { 
+      return {
         size: file.size ?? file.fixity?.size ?? (await file.stat()).size,
         crc32: file.fixity?.crc32 ?? await calculateCrc32(file)
       };
@@ -97,18 +100,42 @@ function wrap(ocflObject: OcflObject): CrateObject {
   };
 }
 
-export async function getIndexerState(_crateId?: string, _typee?: string) {
-  return {
-    isIndexed: false,
-    isIndexing: false,
-    isDeleting: false,
-  };
+function _setState(crateId: string, types: string | string[], state?: typeof State[keyof typeof State]) {
+  stateCache[crateId] = stateCache[crateId] || {};
+  for (const type of ([] as string[]).concat(types)) {
+    stateCache[crateId][type] = state;
+  }
+}
+
+function setState(crateId: string | undefined, types: string | string[], state?: typeof State[keyof typeof State]) {
+  if (crateId) {
+    _setState(crateId, types, state);
+  } else {
+    for (const id in stateCache) {
+      _setState(id, types, state);
+    }
+  }
+}
+  
+export async function getState(crateId: string, type?: string) {
+  const indexers: [string, Indexer][] = type ? [[type, INDEXER[type]]] : Object.entries(INDEXER);
+  for (const [name, indexer] of indexers) {
+    if (!indexer) return;
+    if (!stateCache[crateId]?.[name]) {
+      const count = await INDEXER[name].count(crateId);
+      if (count > 0) {
+        stateCache[crateId] = stateCache[crateId] || {};
+        stateCache[crateId][name] = State.INDEXED;
+      }
+    }
+    //if (!StateCache[crateId]?.[name]) return State.NONE;
+  }
+  return type ? { [type]: stateCache[crateId][type] } : (stateCache[crateId] ?? {});
 }
 
 async function indexObject(ocflObject: OcflObject, types: string[], force?: boolean) {
   if (!ocflObject) return;
   try {
-    await ocflObject.load();
     log.debug(`Found OFCL object: ${ocflObject.id}`);
     const jsonContent = await ocflObject.getFile({ logicalPath: 'ro-crate-metadata.json' }).text();
     const rawCrate = JSON.parse(jsonContent);
@@ -116,6 +143,7 @@ async function indexObject(ocflObject: OcflObject, types: string[], force?: bool
     for (const t of types) {
       const indexer = INDEXER[t];
       if (indexer) {
+        setState(ocflObject.id, t, State.INDEXING);
         try {
           if (force) await indexer.delete(crate.rootId);
           const crateObject = wrap(ocflObject);
@@ -123,6 +151,8 @@ async function indexObject(ocflObject: OcflObject, types: string[], force?: bool
           // counts[t]++;
         } catch (error) {
           log.error(error);
+        } finally {
+          setState(ocflObject.id, t);
         }
       }
     }
@@ -131,24 +161,31 @@ async function indexObject(ocflObject: OcflObject, types: string[], force?: bool
   }
 }
 
-export async function createIndex(crateId?: string | RegExp, type?: string, force?: boolean) {
+export async function createIndex(crateId?: string | RegExp, type?: string | string[], force?: boolean) {
   log.debug('Indexing started');
-  const types = type ? [type] : ['structural', 'search'];
+  const types = type ? ([] as string[]).concat(type) : Object.keys(INDEXER);
   if (typeof crateId === 'string') {
     await indexObject(repository.object(crateId), types, force);
   } else {
     // process IO in parallel
-    const fn =
-      crateId instanceof RegExp
-        ? // if crateId is specified, index just the object and the subcollections and child objects
-        // by checking just the structure implied in the crate id
-        async (ocflObject: unknown) =>
-          (await ocflObject.getInventory())?.id.match(crateId) ? indexObject(ocflObject, types, force) : undefined
-        : // otherwise, index everything
-        async (ocflObject: unknown) => indexObject(ocflObject, types, force);
-    const pq = new PromiseQueue(4, fn);
-    for await (const ocflObject of repository) {
-      await pq.enqueue(ocflObject);
+    const pq = new PromiseQueue(4, async (ocflObject: unknown) => indexObject(ocflObject, types, force));
+    if (crateId instanceof RegExp) {
+      // if crateId pattern is specified, index just the object and the subcollections and child objects
+      // by checking just the structure implied in the crate id
+      for await (const ocflObject of repository) {
+        await ocflObject.load();
+        if (ocflObject.id.match(crateId)) {
+          setState(ocflObject.id, types, State.QUEUED);
+          await pq.enqueue(ocflObject);
+        }
+      }
+    } else {
+      // otherwise, index everything
+      for await (const ocflObject of repository) {
+        await ocflObject.load();
+        setState(ocflObject.id, types, State.QUEUED);
+        await pq.enqueue(ocflObject);
+      }
     }
     await pq.done();
   }
@@ -156,24 +193,27 @@ export async function createIndex(crateId?: string | RegExp, type?: string, forc
 }
 
 export async function deleteIndex(crateId?: string, type?: string | string[]) {
-  const indexers = type
-    ? ([] as string[])
-      .concat(type)
-      .map((t) => INDEXER[t])
-      .filter((i) => !!i)
-    : Object.values(INDEXER);
+  const types = type ? ([] as string[]).concat(type) : Object.keys(INDEXER);
+  const indexers = types.map((t) => INDEXER[t]).filter((i) => !!i);
+  setState(crateId, types, State.DELETING);
   await Promise.allSettled(indexers.map((indexer) => indexer.delete(crateId)));
+  setState(crateId, types);
 }
 
-export async function* objects(_base: string) {
-  //TODO: implement listing only top-level collections
+export async function* objects(prefix?: string, refresh?: boolean) {
+  if (typeof prefix === 'boolean') {
+    refresh = prefix;
+    prefix = '';
+  } else if (prefix == null) {
+    prefix = '';
+  }
   for await (const ocflObject of repository) {
     try {
       const inv = await ocflObject.getInventory();
       const jsonContent = await ocflObject.getFile({ logicalPath: 'ro-crate-metadata.json' }).text();
       const jsonParsed = JSON.parse(jsonContent);
       const name = jsonParsed['@graph'].find((e: any) => e['@id'] === inv.id)?.name?.toString();
-      yield { id: inv.id, name, path: ocflObject.root };
+      yield { id: inv.id, name, path: ocflObject.root, state: await getState(inv.id) };
     } catch (error) {
       log.error(error);
     }

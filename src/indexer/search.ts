@@ -5,11 +5,13 @@ import type {
   Search_RequestBody,
 } from '@opensearch-project/opensearch/api/index.d.ts';
 import type { ROCrate } from 'ro-crate';
-import { log } from '../utils.ts';
+import { log as plog} from '../utils.ts';
 import { PromiseQueue, firstStringOrId } from '../utils.ts';
 import type { CrateObject } from './indexer.ts';
 import { Indexer, RecordType } from './indexer.ts';
 import { dataTypeMapper, mapDefaultProperties, propertyMapper } from './search_mapper.ts';
+
+const log = plog.child({ module: 'indexer/search' });
 
 /**
  * Notes:
@@ -49,9 +51,9 @@ const batchedTypeIndexer: Record<string, (params: MapperParams) => Promise<Recor
       const entityId = entity['@id'];
       try {
         record._text = (await crateObject?.text(entityId)) || '';
-        log.info(`[search] Indexing File: ${entityId}`);
+        log.info(`Indexing File: ${entityId}`);
       } catch (e) {
-        log.error(`[search] Cannot read file: ${entityId}`);
+        log.error(`Cannot read file: ${entityId}`);
         log.error(e);
         record._error = 'file_not_found';
       }
@@ -107,7 +109,7 @@ export class SearchIndexer extends Indexer {
       } else {
         await this.client.indices.delete({ index: this.conf.entityIndex });
       }
-      log.debug(`[search] Index ${crateId || '<all>'} deleted`);
+      log.debug(`Index ${crateId || '<all>'} deleted`);
     } catch (error) {
       if ((error as any).meta?.statusCode !== 404) {
         log.error(error);
@@ -115,12 +117,15 @@ export class SearchIndexer extends Indexer {
     }
   }
 
-  async count() {
+  async count(crateId?: string) {
     try {
-      const res = await this.client.count({ index: this.conf.entityIndex });
+      const res = await this.client.count({ 
+        index: this.conf.entityIndex, 
+        ...(crateId && { body: { query: { prefix: { id: { value: crateId } } } } }) 
+      });
       return res.body.count;
     } catch (e) {
-      log.error(e);
+      //log.error(e);
     }
     return 0;
   }
@@ -163,7 +168,7 @@ export class SearchIndexer extends Indexer {
         // doc._metadataIsPublic = metadataLicense?.metadataIsPublic;
         // doc._metadataLicense = metadataLicense;
         let record = createDoc(crate, entity, _id, license, metadataLicense, deferredEntities, this.propertyMapper);
-        log.debug(`[structural] Adding ${_id}`);
+        log.debug(`Adding ${_id}`);
         // add additional information to record based on type
         for (const mapType of matchedMappers) {
           record = mapType({ properties, entity, record, crate, crateObject });
@@ -173,17 +178,20 @@ export class SearchIndexer extends Indexer {
       }
     }
     try {
+      //log.debug('Start bulk indexing');
       const result = await this.client.bulk({
         body: operations,
         refresh: true, // setting this to true will update result immediately, but will degrade performance
       });
+      //log.debug('Finish bulk indexing');
       if (result.body.errors) {
-        log.error(`[search] Bulk operation result errors:`);
+        log.error(`Bulk operation result errors:`);
         const items = result.body.items.filter((item) => item.update.error).map((item) => item.update.error?.reason);
         log.error(items.join('\n'));
       }
       // index bigger data such as file content in a separate step to manage payload size
       const pq = new PromiseQueue(4, async (entity) => {
+        log.debug(`Processing deferred entity: ${entity['@id']}`);
         const entityTypes: string[] = entity['@type'];
         const matchedIndexers = entityTypes.map((t) => batchedTypeIndexer[t]).filter((fn) => !!fn);
         let doc = {};
@@ -196,9 +204,7 @@ export class SearchIndexer extends Indexer {
           id: deriveId(entity['@id']),
           body: { doc, doc_as_upsert: true },
         });
-        log.debug(
-          `[search] Batched operation result: ${result.body._id} ${result.body.result} ${result.statusCode}`,
-        );
+        log.debug(`Batched operation result: ${result.body._id} ${result.body.result} ${result.statusCode}`);
       });
       for (const entity of deferredEntities) {
         await pq.enqueue(entity);

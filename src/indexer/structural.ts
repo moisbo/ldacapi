@@ -2,7 +2,9 @@ import { ROCrate } from 'ro-crate';
 import { prisma } from '../index.ts';
 import { PromiseQueue, firstStringOrId } from '../utils.ts';
 import { type CrateFile, Indexer, RecordType } from './indexer.ts';
-import { log } from '../utils.ts';
+import { log as plog} from '../utils.ts';
+
+const log = plog.child({ module: 'indexer/structural' });
 
 export class StructuralIndexer extends Indexer {
   ocflPath: string;
@@ -28,8 +30,12 @@ export class StructuralIndexer extends Indexer {
         const data = opt[tableName];
         //console.log(data.Metadatalicense);
         if (data) {
-          // @ts-ignore
-          await prisma[tableName].create({ data });
+          try {
+            // @ts-ignore
+            await prisma[tableName].create({ data });            
+          } catch (error) {
+            log.error(`Error indexing ${crateId} ${data.id}: ${(error as Error).message}`);
+          }
         }
       }
     });
@@ -46,7 +52,7 @@ export class StructuralIndexer extends Indexer {
           continue;
         }
       }
-      log.debug(`[structural] Indexing ${crateId} ${entity['@id']}`);
+      log.debug(`Indexing ${crateId} ${entity['@id']}`);
       count++;
       const entityId = this.deriveUniqueEntityId(crateId, entity['@id']);
       const rocrate = entityAsCrate(crate, entity);
@@ -69,14 +75,14 @@ export class StructuralIndexer extends Indexer {
         try {
           f = await crateObject.file(storagePath);
         } catch (error) {
-          log.error(`[structural][${crateId}] ${(error as Error).message}`);
+          log.error(`[${crateId}] ${(error as Error).message}`);
         }
         /* @ts-ignore */
         param.file = {
           id: entityId,
           filename: storagePath.split('/').pop(),
           mediaType: entity.encodingFormat?.find(v => typeof v === 'string') || 'application/octet-stream',
-          size: entity.contentSize ?? f.size,
+          size: +(entity.contentSize?.[0] ?? f.size),
           meta: {
             storagePath,
             crc32: f.crc32
@@ -105,7 +111,7 @@ export class StructuralIndexer extends Indexer {
     //   }
     // }
 
-    log.info(`[structural] Indexed ${crateId}: entities=${count}`);
+    log.info(`Indexed ${crateId}: entities=${count}`);
   }
 
   async delete(crateId?: string) {
@@ -113,7 +119,7 @@ export class StructuralIndexer extends Indexer {
     //const truncate = !crateId;
     await prisma.file.deleteMany({ where });
     await prisma.entity.deleteMany({ where });
-    log.debug(`[structural] Index ${crateId || '<all>'} deleted`);
+    log.debug(`Index ${crateId || '<all>'} deleted`);
     //await File.destroy({ truncate, where });
   }
 

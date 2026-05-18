@@ -262,7 +262,10 @@
       "inLanguage": {
         "@id": "https://glottolog.org/resource/languoid/id/stan1293"
       },
-      "name": "Introduction to Oni"
+      "name": "Introduction to Oni",
+      "contentLocation": {
+        "@id": "#place_A-QLD"
+      }
     },
     {
       "@id": "arcp://name,bundled/ch1/history",
@@ -354,6 +357,7 @@
       "description": "Test video",
       "encodingFormat": "audio/mpeg",
       "name": "Corpus of Oni Test Video",
+      "contentSize": 163840,
       "editor": { "@id": "arcp://name,people/JohnSmith" }
     },
     {

@@ -1,7 +1,9 @@
 import type { ROCrate } from "ro-crate";
 import { config } from "../configuration.ts";
-import { log } from "../utils.ts";
+import { log as plog} from '../utils.ts';
 import { firstStringOrId } from '../utils.ts';
+
+const log = plog.child({ module: 'indexer' });
 
 type BaseOptions = {
   defaultLicense?: string;
@@ -49,10 +51,6 @@ export class Indexer {
 
   async init() {}
 
-  async _index(param: { crateObject: CrateObject, crate: ROCrate, license: string, metadataLicense: string }) {
-    throw new Error('Not Implemented');
-  }
-
   async count(crateId?: string): Promise<number> {
     throw new Error('Not Implemented');
   }
@@ -71,7 +69,7 @@ export class Indexer {
     const crateId = crate.rootId;
     const metadataLicense = firstStringOrId(crate.descriptor.license) || this.defaultMetadataLicense;
     const license = firstStringOrId(rootDataset.license) || this.defaultLicense;
-    const warnPrefix = `[${this.name}][${crateObject.root}]`;
+    const warnPrefix = `[${crateObject.root}]`;
     if (!rootDataset) {
       log.warn(`${warnPrefix} Skipped: Does not contain an ROCrate with a valid root dataset.`);
     } else if (crateId === './') {
@@ -84,10 +82,27 @@ export class Indexer {
       //logger.debug('index ' + ocflObject.root);
       //console.log(this.__state);
       log.info(`Indexing ${crateId}`);
-      await this._index({ crateObject, crate, license, metadataLicense });
+      try {
+        await this._index({ crateObject, crate, license, metadataLicense });
+      } catch (error) {
+        log.error(`${warnPrefix} Error occurred while indexing: ${error}`);
+      }
+      log.info(`Indexed ${crateId}`);
     }
+  }
+
+  async _index(param: { crateObject: CrateObject, crate: ROCrate, license: string, metadataLicense: string }) {
+    throw new Error('Not Implemented');
+  }
+
+  /** Index a single entity within the crate. This needs to be implemented in the specific concrete indexer implementation. */
+  async _indexEntity(param: { crateObject: CrateObject, crate: ROCrate, license: string, metadataLicense: string }) {
+    throw new Error('Not Implemented');
   }
 
 }
 
 export const RecordType = config.indexType;
+
+
+ 

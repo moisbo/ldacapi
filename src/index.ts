@@ -11,6 +11,7 @@ import ldacapi, { fileHandler } from './app.ts';
 import { config } from './configuration.ts';
 import { PrismaClient } from './generated/prisma/client.ts';
 import { fastify } from './utils.ts';
+import { log } from 'node:console';
 
 export const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: config.databaseUrl })
@@ -73,6 +74,8 @@ fastify.register(ldacapi, appOpt);
     if (config.isDev) {
       fastify.log.info(`Server is running on development mode`);
     }
+    fastify.log.debug(`Using database ${config.databaseUrl}`);
+    fastify.log.debug(`Using opensearch  ${config.opensearchUrl}`);
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)
