@@ -78,7 +78,8 @@ export default {
           //recordType: { type: 'keyword' },
           //root: { type: 'keyword' },
           inLanguage: { type: 'keyword' },
-          location: { type: 'geo_shape', doc_values: false }, //at the moment the property name location is hardcoded.
+          location: { type: 'geo_shape' }, //the property name `location` used for map search is hardcoded.
+          //location: { type: 'geo_shape', doc_values: false },
           mediaType: { type: 'keyword' },
           datePublished: { type: 'date_range' },
           dateCreated: { type: 'date_range' },
