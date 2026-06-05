@@ -5,21 +5,30 @@ import { log } from './utils.ts';
 export { config };
 const nodeEnv = process.env.NODE_ENV || 'development';
 const configPath = process.env.LDACAPI_CONFIG_PATH || `../${nodeEnv}.config.ts`;
-(async function() {
+(async () => {
   try {
     const actualConfig = await import(configPath);
     log.info(`Loaded config from ${configPath}`);
-    merge(config, actualConfig.default);
+    merge(config as unknown as PlainObject, actualConfig.default as PlainObject);    
   } catch (error) {
     log.error(error);
   }
 })();
 
-function merge(target: any, source: any) {
+type PlainObject = Record<string, unknown>;
+
+function isPlainObject(value: unknown): value is PlainObject {
+  return typeof value === 'object' && value !== null && Object.is((value as object).constructor, Object);
+}
+
+function merge(target: PlainObject, source: PlainObject) {
   for (const key in source) {
     const value = source[key];
-    if (typeof value === 'object' && Object.is(value.constructor, Object)) {
-      merge(target[key], value);
+    if (isPlainObject(value)) {
+      if (!isPlainObject(target[key])) {
+        target[key] = {};
+      }
+      merge(target[key] as PlainObject, value);
     } else {
       target[key] = value;
     }
