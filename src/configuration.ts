@@ -19,6 +19,7 @@ function merge(target: any, source: any) {
   for (const key in source) {
     const value = source[key];
     if (typeof value === 'object' && Object.is(value.constructor, Object)) {
+      target[key] = target[key] ?? {};
       merge(target[key], value);
     } else {
       target[key] = value;
