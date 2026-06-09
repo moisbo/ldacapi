@@ -3,10 +3,8 @@ import { config } from './configuration.ts';
 
 export const fastify = Fastify({
   routerOptions: {
-    //ignoreTrailingSlash: true,
     maxParamLength: config.maxParamLength,
   },
-  //logger: { level: 'debug' },
   logger: {
     level: config.logLevel,
     ...(config.isDev && {
