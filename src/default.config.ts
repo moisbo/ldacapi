@@ -10,6 +10,7 @@ export default {
   port: parseInt(env.LDACAPI_PORT || '8080'),
   host: env.LDACAPI_HOST,
   logLevel: env.LOG_LEVEL || (isDev ? 'debug' : 'info'),
+  maxParamLength: parseInt(env.LDACAPI_MAX_PARAM_LENGTH || '500'),
   tokenAdmin: env.TOKEN_ADMIN || '1234-1234-1234-1234',
   defaultLicense: '',
   defaultMetadataLicense: '',

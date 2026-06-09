@@ -2,6 +2,10 @@ import Fastify from 'fastify';
 import { config } from './configuration.ts';
 
 export const fastify = Fastify({
+  routerOptions: {
+    //ignoreTrailingSlash: true,
+    maxParamLength: config.maxParamLength,
+  },
   //logger: { level: 'debug' },
   logger: {
     level: config.logLevel,
@@ -10,10 +14,7 @@ export const fastify = Fastify({
         target: 'pino-pretty',
         options: { messageFormat: '[{module}] {msg}', ignore: 'pid,module,hostname' },
       }
-    }),
-    // routerOptions: {
-    //   ignoreTrailingSlash: true,
-    // }
+    })
   }
 });
 
