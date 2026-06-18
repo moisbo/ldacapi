@@ -1,40 +1,41 @@
 //import config from '../prisma.config.ts';
+import { Readable } from 'node:stream';
 import cors from '@fastify/cors';
 import fastifyRoutes from '@fastify/routes';
+import fastifySensible from '@fastify/sensible';
 import { Client } from '@opensearch-project/opensearch';
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaPg } from '@prisma/adapter-pg';
 import type { Options } from 'arocapi';
-import arocapi, { AllPublicAccessTransformer, AllPublicFileAccessTransformer } from 'arocapi';
+import arocapi from 'arocapi';
 import type { RegisterOptions } from 'fastify';
-import { Readable } from 'node:stream';
 import ldacapi, { fileHandler } from './app.ts';
+import { accessTransformer } from './auth.ts';
 import { config } from './configuration.ts';
 import { PrismaClient } from './generated/prisma/client.ts';
 import { fastify } from './utils.ts';
-import { log } from 'node:console';
 
 export const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: config.databaseUrl })
+  adapter: new PrismaPg({ connectionString: config.databaseUrl }),
 });
 const opensearch = new Client({ node: config.opensearchUrl });
 
-const appOpt: Options & RegisterOptions = { 
+const appOpt: Options & RegisterOptions = {
   prisma,
   opensearch,
   disableCors: true,
   queryBuilderOptions: { aggregations: config.search.aggregations },
-  accessTransformer: AllPublicAccessTransformer,
-  fileAccessTransformer: AllPublicFileAccessTransformer,
+  accessTransformer: accessTransformer,
+  fileAccessTransformer: accessTransformer,
   entityTransformers: [
     (entity, { fastify }) => {
       entity.accessControl = 'Public';
       entity.counts = {
         collections: 0,
         objects: 0,
-        files: 0
-      }
+        files: 0,
+      };
       return entity;
-    }
+    },
   ],
   fileHandler,
   // Required: RO-Crate handler for serving RO-Crate metadata
@@ -57,28 +58,26 @@ const appOpt: Options & RegisterOptions = {
   },
   prefix: config.prefix || '',
 };
-
-//fastify.register(fastifySensible);
+fastify.decorateRequest('userLicenses', null);
+fastify.decorateRequest('userId', null);
+fastify.register(fastifySensible);
 fastify.register(cors, {
   methods: ['HEAD', 'GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 });
 fastify.register(fastifyRoutes, { prefix: appOpt.prefix });
 fastify.register(arocapi, appOpt);
 fastify.register(ldacapi, appOpt);
-
 // Run the server!
 (async function () {
   try {
-    await fastify.ready();
     await fastify.listen({ port: config.port, host: config.host });
     if (config.isDev) {
       fastify.log.info(`Server is running on development mode`);
     }
     fastify.log.debug(`Using database ${config.databaseUrl}`);
-    fastify.log.debug(`Using opensearch  ${config.opensearchUrl}`);
+    fastify.log.debug(`Using opensearch ${config.opensearchUrl}`);
   } catch (err) {
-    fastify.log.error(err)
-    process.exit(1)
+    fastify.log.error(err);
+    process.exit(1);
   }
 })();
-

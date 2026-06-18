@@ -7,14 +7,31 @@ export default {
   isDev,
   databaseUrl: env.DATABASE_URL || 'postgresql://ldaca:ldaca@localhost:5432/ldaca',
   opensearchUrl: env.OPENSEARCH_URL || 'http://localhost:9200',
-  port: parseInt(env.LDACAPI_PORT || '8080'),
+  port: parseInt(env.LDACAPI_PORT || '8080', 10),
   host: env.LDACAPI_HOST,
   logLevel: env.LOG_LEVEL || (isDev ? 'debug' : 'info'),
   maxParamLength: parseInt(env.LDACAPI_MAX_PARAM_LENGTH || '500'),
   tokenAdmin: env.TOKEN_ADMIN || '1234-1234-1234-1234',
   defaultLicense: '',
   defaultMetadataLicense: '',
+  openLicenses: [
+    'https://creativecommons.org/licenses/by/3.0/au/',
+    'https://creativecommons.org/licenses/by/4.0/',
+    'https://creativecommons.org/licenses/by-nc/4.0/',
+    'https://creativecommons.org/licenses/by-nd/3.0/au/',
+  ],
   prefix: '/api',
+  rems: {
+    user: env.REMS_USER || '',
+    key: env.REMS_KEY || '',
+    endpoint: env.REMS_ENDPOINT || ''
+  },
+  oidc: {
+    endpoint: env.OIDC_ENDPOINT || '',
+    clientId: env.OIDC_CLIENT_ID || '',
+    clientSecret: env.OIDC_CLIENT_SECRET || '',
+    userinfoEndpoint: ''
+  },
   indexType: {
     RepositoryCollection: 'https://w3id.org/ldac/profile#Collection',
     RepositoryObject: 'https://w3id.org/ldac/profile#Object',

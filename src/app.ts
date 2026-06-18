@@ -1,14 +1,14 @@
 import type { Client } from '@opensearch-project/opensearch';
 import type { PrismaClient } from '@prisma/client/extension';
 import type { AccessTransformer, EntityTransformer, FileHandler, FileMetadata } from 'arocapi';
-import pkg from "../package.json" with { type: "json" };
-
 import type { FastifyPluginAsync } from 'fastify';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
+import pkg from '../package.json' with { type: 'json' };
 import type { File } from './generated/prisma/client.ts';
-import { log } from './utils.ts';
 import { initRepository, type Repository } from './repository.ts';
 import { admin } from './routes/admin.ts';
+import { auth } from './routes/auth.ts';
+import { log } from './utils.ts';
 
 // declare module 'fastify' {
 //   interface FastifyInstance {
@@ -33,7 +33,7 @@ const ldacapi: FastifyPluginAsync<LdacapiOptions> = async (fastify, options: Lda
   fastify.decorate('repository', repository);
 
   // Declare a route
-  fastify.get('/', async function handler(request, reply) {
+  fastify.get('/', async function handler(_request,_replyy) {
     const routes = fastify.routes.keys().toArray();
     return {
       about: 'Example implementation of mounting an ROCrate API in a fastify app',
@@ -44,7 +44,7 @@ const ldacapi: FastifyPluginAsync<LdacapiOptions> = async (fastify, options: Lda
   const { version } = pkg;
   fastify.get('/version', async () => ({ version }));
   fastify.register(admin, { prefix: '/admin', repository });
-
+  fastify.register(auth);
 };
 
 export default ldacapi;
@@ -74,4 +74,4 @@ export const fileHandler: FileHandler = {
     }
   },
   head: async (file) => fileMetadata(file),
-}
+};

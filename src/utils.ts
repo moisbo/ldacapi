@@ -18,7 +18,7 @@ export const fastify = Fastify({
 
 export const log = fastify.log;
 
-export class PromiseQueue<T = any> {
+export class PromiseQueue<T = unknown> {
   concurrency: number;
   sharedFunction?: (t: T) => Promise<unknown>;
   #runs: (Promise<unknown> | null)[] = [];
@@ -81,14 +81,5 @@ export function firstStringOrId(values: unknown[]): string | undefined {
   }
 }
 
-// function delay() {
-//   return new Promise(resolve => setTimeout(resolve, 200));
-// }
-// const pq = new PromiseQueue(4);
-// for (let i=0; i<10; i++) {
-//   console.log('s', i);
-//   await pq.enqueue(async () => {
-//     await delay();
-//     console.log(i);
-//   });
-// }
+export class TemporalMap<_T = unknown> {
+}

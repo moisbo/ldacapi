@@ -23,6 +23,7 @@
     "@biomejs/biome": "^2.4.9",
     "@fastify/bearer-auth": "^10.1.2",
     "@fastify/cors": "^11.2.0",
+    "@fastify/formbody": "^8.0.2",
     "@fastify/multipart": "^9.2.1",
     "@fastify/routes": "^6.0.2",
     "@fastify/sensible": "^6.0.4",

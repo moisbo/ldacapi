@@ -333,6 +333,9 @@
       "description": "Facts",
       "encodingFormat": "text/csv",
       "name": "Facts Table",
+      "license": {
+        "@id": "https://choosealicense.com/no-permission/"
+      },
       "author": [
         { "@id": "arcp://name,people/JohnSmith" },
         { "@id": "arcp://name,people/JaneSmith" }
@@ -348,7 +351,10 @@
       "@id": "sub_col_2.txt",
       "@type": "File",
       "description": "Test sub collection 1",
-      "name": "sub_col_2"
+      "name": "sub_col_2",
+      "license": {
+        "@id": "https://www.ldaca.edu.au/licenses/gcsae/transcripts/v1/"
+      }
     },
     {
       "@id": "media/intro.mpeg",
