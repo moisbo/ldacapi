@@ -37,7 +37,8 @@ export const auth: FastifyPluginAsync = async (fastify, _opts) => {
 
   app.get('/.well-known/openid-configuration', async (request, reply) => {
     if (openidConfig) {
-      const baseUrl = `${request.protocol}://${request.host}${config.prefix}`;
+      //const baseUrl = `${request.protocol}://${request.host}${config.prefix}`;
+      const baseUrl = `${request.protocol}://${request.host}`;
       if (!modifiedOpenidConfig) {
         modifiedOpenidConfig = { 
           ...openidConfig,
@@ -71,6 +72,7 @@ export const auth: FastifyPluginAsync = async (fastify, _opts) => {
     if (!openidConfig?.token_endpoint) return reply.notFound();
     const incoming = request.body as Record<string, string>;
     incoming.client_secret = config.oidc.clientSecret;
+    console.log(incoming);
     if (incoming.client_id !== config.oidc.clientId) return reply.badRequest('Invalid client_id');
     try {
       const result = await fetch(openidConfig.token_endpoint, {

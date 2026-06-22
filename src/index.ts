@@ -9,6 +9,7 @@ import type { Options } from 'arocapi';
 import arocapi from 'arocapi';
 import type { RegisterOptions } from 'fastify';
 import ldacapi, { fileHandler } from './app.ts';
+import { auth } from './routes/auth.ts';
 import { accessTransformer } from './auth.ts';
 import { config } from './configuration.ts';
 import { PrismaClient } from './generated/prisma/client.ts';
@@ -67,6 +68,7 @@ fastify.register(cors, {
 fastify.register(fastifyRoutes, { prefix: appOpt.prefix });
 fastify.register(arocapi, appOpt);
 fastify.register(ldacapi, appOpt);
+fastify.register(auth);
 // Run the server!
 (async function () {
   try {

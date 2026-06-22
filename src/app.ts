@@ -7,7 +7,6 @@ import pkg from '../package.json' with { type: 'json' };
 import type { File } from './generated/prisma/client.ts';
 import { initRepository, type Repository } from './repository.ts';
 import { admin } from './routes/admin.ts';
-import { auth } from './routes/auth.ts';
 import { log } from './utils.ts';
 
 // declare module 'fastify' {
@@ -44,7 +43,6 @@ const ldacapi: FastifyPluginAsync<LdacapiOptions> = async (fastify, options: Lda
   const { version } = pkg;
   fastify.get('/version', async () => ({ version }));
   fastify.register(admin, { prefix: '/admin', repository });
-  fastify.register(auth);
 };
 
 export default ldacapi;
