@@ -5,15 +5,14 @@ import { log } from './utils.ts';
 export { config };
 const nodeEnv = process.env.NODE_ENV || 'development';
 const configPath = process.env.LDACAPI_CONFIG_PATH || `../${nodeEnv}.config.ts`;
-(async function() {
-  try {
-    const actualConfig = await import(configPath);
-    log.info(`Loaded config from ${configPath}`);
-    merge(config, actualConfig.default);
-  } catch (error) {
-    log.error(error);
-  }
-})();
+
+try {
+  const actualConfig = await import(configPath);
+  log.info(`Loaded config from ${configPath}`);
+  merge(config, actualConfig.default);
+} catch (error) {
+  log.error(error);
+}
 
 function merge(target: any, source: any) {
   for (const key in source) {

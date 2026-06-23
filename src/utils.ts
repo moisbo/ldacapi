@@ -13,7 +13,8 @@ export const fastify = Fastify({
         options: { messageFormat: '[{module}] {msg}', ignore: 'pid,module,hostname' },
       }
     })
-  }
+  },
+  trustProxy: true // this is required for auth module to work corractly when the app is behind a reverse proxy. The proxy must set the X-Forwarded-* headers correctly.
 });
 
 export const log = fastify.log;

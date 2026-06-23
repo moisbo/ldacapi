@@ -79,7 +79,10 @@ export const auth: FastifyPluginAsync = async (fastify, _opts) => {
         method: 'POST',
         body: new URLSearchParams(incoming)
       });
-      result.headers.forEach((value, key) => { reply.header(key, value) });
+      //result.headers.forEach((value, key) => { reply.header(key, value) });
+      reply.header('pragma', result.headers.get('pragma') || 'no-cache');
+      reply.header('date', result.headers.get('date'));
+      reply.header('set-cookie', result.headers.get('set-cookie'));
       const body = await result.json();
       /** 
        * example:
