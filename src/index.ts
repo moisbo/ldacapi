@@ -68,7 +68,7 @@ fastify.register(cors, {
 fastify.register(fastifyRoutes, { prefix: appOpt.prefix });
 fastify.register(arocapi, appOpt);
 fastify.register(ldacapi, appOpt);
-fastify.register(auth);
+fastify.register(auth, { prefix: config.prefixAuth || config.prefix || '' });
 // Run the server!
 (async function () {
   try {

@@ -21,6 +21,7 @@ export default {
     'https://creativecommons.org/licenses/by-nd/3.0/au/',
   ],
   prefix: '/api',
+  prefixAuth: '',
   rems: {
     user: env.REMS_USER || '',
     key: env.REMS_KEY || '',
