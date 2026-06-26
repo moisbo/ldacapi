@@ -18,17 +18,19 @@ const log = plog.child({ module: 'auth' });
 export const auth: FastifyPluginAsync = async (fastify, _opts) => {
   let openidConfig: Record<string, string>;
   let modifiedOpenidConfig: Record<string, string>;
-  const openidConfigUrl = `${config.oidc.endpoint}/.well-known/openid-configuration`;
-  fetch(openidConfigUrl).then(async (response) => {
-    if (response.ok) {
-      openidConfig = await response.json();
-      config.oidc.userinfoEndpoint = openidConfig.userinfo_endpoint;
-    } else {
-      throw new Error(`Failed to fetch ${openidConfigUrl}: ${response.statusText}`);
-    }
-  }).catch((error) => {
-    log.error(error);
-  });
+  if (config.oidc.endpoint) {
+    const openidConfigUrl = `${config.oidc.endpoint}/.well-known/openid-configuration`;
+    fetch(openidConfigUrl).then(async (response) => {
+      if (response.ok) {
+        openidConfig = await response.json();
+        config.oidc.userinfoEndpoint = openidConfig.userinfo_endpoint;
+      } else {
+        throw new Error(`Failed to fetch ${openidConfigUrl}: ${response.statusText}`);
+      }
+    }).catch((error) => {
+      log.error(error);
+    });
+  }
 
   //let openidConfig: Record<string, string>;
   //console.log(opts);
