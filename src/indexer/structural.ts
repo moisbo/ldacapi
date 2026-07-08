@@ -40,6 +40,17 @@ export class StructuralIndexer extends Indexer {
       }
     });
 
+    // rename all @id first
+    const descriptorId = crate.descriptor['@id'];
+    for (const entity of crate.entities()) {
+      if (entity['@id'] === descriptorId) {
+        continue;
+      }
+      const entityId = this.deriveUniqueEntityId(crateId, entity['@id']);
+      if (entityId !== entity['@id']) {
+        entity['@id'] = entityId;
+      }
+    }
     for (const entity of crate.entities()) {
       const entityType = entity['@type'].find((t) => t in RecordType); // only the first matching entity type is used
       if (!entityType) {
@@ -54,7 +65,7 @@ export class StructuralIndexer extends Indexer {
       }
       log.debug(`Indexing ${crateId} ${entity['@id']}`);
       count++;
-      const entityId = this.deriveUniqueEntityId(crateId, entity['@id']);
+      const entityId = entity['@id'];
       const rocrate = entityAsCrate(crate, entity);
       const param = {
         entity: {
@@ -70,7 +81,7 @@ export class StructuralIndexer extends Indexer {
         }
       };
       if (entityType.endsWith('://schema.org/MediaObject') || entityType === 'File') {
-        const storagePath = entity['@id'];
+        const storagePath = entity['@id'].match(/.+:.+/) ? entity['@id'].replace(crateId + '/', '') : entity['@id'];
         let f: CrateFile = { size: -1, crc32: '' };
         try {
           f = await crateObject.file(storagePath);
@@ -92,24 +103,6 @@ export class StructuralIndexer extends Indexer {
       await pq.enqueue(param);
     }
     await pq.done();
-    // const relRoot = relative(this.ocflPath, objectRoot);
-    // let count = 0;
-    // for await (let f of await ocflObject.files()) {
-    //   try {
-    //     await File.create({
-    //       path: join(relRoot, f.contentPath),
-    //       logicalPath: f.logicalPath,
-    //       crateId,
-    //       size: f.size,
-    //       crc32: hash,
-    //       lastModified: f.lastModified
-    //     });
-    //     logger.debug(`[structural] [${rec.crateId}] Indexed file ${f.logicalPath}`);
-    //     count++;
-    //   } catch (error) {
-    //     logger.error(error.message);
-    //   }
-    // }
 
     log.info(`Indexed ${crateId}: entities=${count}`);
   }
