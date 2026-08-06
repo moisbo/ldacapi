@@ -1,4 +1,4 @@
-import type { AuthorisedEntity, AuthorisedFile, StandardEntity, } from 'arocapi';
+import type { AuthorisedEntity, AuthorisedFile, StandardEntity, AccessTransformer } from 'arocapi';
 import type { FastifyRequest } from 'fastify';
 import { config } from './configuration.ts';
 
@@ -17,12 +17,20 @@ type RemsUserEntitlement = {
   mail: string;
 };
 
+const renderTemplate = new Function('licenseId', 'return `' + config.enrollmentUrl + '`;');
+function resolveEnrollmentUrl(licenseId: string) {
+  return renderTemplate(licenseId)
+}
+
+export async function resolveValidLicenses() {
+  return config.openLicenses;
+}
+
 export async function accessTransformer(
   entity: StandardEntity,
   { request }: { request: FastifyRequest },
 ): Promise<AuthorisedEntity | AuthorisedFile> {
   const { metadataLicenseId, contentLicenseId } = entity;
-  console.log(entity);
   const canAccessMetadata = await checkLicense(request, metadataLicenseId);
   const canAccessContent = await checkLicense(request, contentLicenseId);
   if (!canAccessMetadata) entity.description = '[Access is restricted]';
@@ -30,9 +38,10 @@ export async function accessTransformer(
     ...entity,
     access: {
       metadata: canAccessMetadata,
-      content: canAccessContent,
-      metadataAuthorizationUrl: canAccessMetadata ? undefined : 'https://rems.example.com/request-access',
-      contentAuthorizationUrl: canAccessContent ? undefined : 'https://rems.example.com/request-access',
+      content: true,
+      //content: canAccessContent,
+      metadataAuthorizationUrl: canAccessMetadata ? undefined : resolveEnrollmentUrl(encodeURIComponent(metadataLicenseId)),
+      contentAuthorizationUrl: canAccessContent ? undefined : resolveEnrollmentUrl(encodeURIComponent(contentLicenseId)),
     },
   };
 }
@@ -52,6 +61,7 @@ async function checkLicense(request: FastifyRequest, licenseId: string): Promise
             accept: 'application/json',
           },
         });
+        console.log(res);
         if (res.ok) {
           const data = await res.json();
           console.log(data);
@@ -91,3 +101,4 @@ async function authenticateUser(request: FastifyRequest): Promise<string | undef
     }
   }
 }
+

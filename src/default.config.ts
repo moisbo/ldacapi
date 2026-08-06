@@ -27,6 +27,7 @@ export default {
     key: env.REMS_KEY || '',
     endpoint: env.REMS_ENDPOINT || ''
   },
+  enrollmentUrl: env.ENROLLMENT_URL || '',
   oidc: {
     endpoint: env.OIDC_ENDPOINT || '',
     clientId: env.OIDC_CLIENT_ID || '',

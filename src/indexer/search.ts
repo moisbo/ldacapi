@@ -48,12 +48,14 @@ const batchedTypeIndexer: Record<string, (params: MapperParams) => Promise<Recor
   File: async function ({ entity, record, crate, crateObject }) {
     //todo: check licence if it allows indexing content
     if (isText(entity)) {
-      const entityId = entity['@id'];
+      const entityId = entity['@id'] as string;
+      const filepath = entityId.startsWith(crate.rootId) ? entityId.replace(crate.rootId + '/', '') : entityId;
       try {
-        record._text = (await crateObject?.text(entityId)) || '';
-        log.info(`Indexing File: ${entityId}`);
+        //log.debug(filepath);
+        record._text = (await crateObject?.text(filepath)) || '';
+        log.info(`Indexing File: ${filepath}`);
       } catch (e) {
-        log.error(`Cannot read file: ${entityId}`);
+        log.error(`Cannot read file: ${filepath}`);
         log.error(e);
         record._error = 'file_not_found';
       }
@@ -179,6 +181,7 @@ export class SearchIndexer extends Indexer {
     }
     try {
       //log.debug('Start bulk indexing');
+      //log.debug(operations);
       const result = await this.client.bulk({
         body: operations,
         refresh: true, // setting this to true will update result immediately, but will degrade performance
@@ -188,6 +191,7 @@ export class SearchIndexer extends Indexer {
         log.error(`Bulk operation result errors:`);
         const items = result.body.items.filter((item) => item.update.error).map((item) => item.update.error?.reason);
         log.error(items.join('\n'));
+        log.error(result.body);
       }
       // index bigger data such as file content in a separate step to manage payload size
       const pq = new PromiseQueue(4, async (entity) => {
@@ -282,8 +286,7 @@ function createDoc(
           if (record[name] == null) {
             record[name] = vals;
           } else {
-            if (!Array.isArray(record[name])) record[name] = [record[name]];
-            for (const v of vals) record[name].push(v);
+            record[name] = [].concat(record[name], vals);
           }
         }
         if (res != null) values.push(res);
@@ -292,7 +295,15 @@ function createDoc(
       //console.log(propName, record[propName]);
     }
   }
-
+  if (record._locations && record._locations.length) {
+    // index geolocation in a separate field to support geo search, this location name is hardcoded
+    const locations = [...(new Set([...record._locations]))];
+    if (locations.length === 1) {
+      record.location = locations[0];
+    } else {
+      record.location = `GEOMETRYCOLLECTION( ${locations.join(', ')} )`;
+    }
+  }
   return record;
 }
 

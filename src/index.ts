@@ -10,7 +10,7 @@ import arocapi from 'arocapi';
 import type { RegisterOptions } from 'fastify';
 import ldacapi, { fileHandler } from './app.ts';
 import { auth } from './routes/auth.ts';
-import { accessTransformer } from './auth.ts';
+import { accessTransformer, resolveValidLicenses } from './auth.ts';
 import { config } from './configuration.ts';
 import { PrismaClient } from './generated/prisma/client.ts';
 import { fastify } from './utils.ts';
@@ -27,6 +27,7 @@ const appOpt: Options & RegisterOptions = {
   queryBuilderOptions: { aggregations: config.search.aggregations },
   accessTransformer: accessTransformer,
   fileAccessTransformer: accessTransformer,
+  resolveValidLicenses,
   entityTransformers: [
     (entity, { fastify }) => {
       entity.accessControl = 'Public';

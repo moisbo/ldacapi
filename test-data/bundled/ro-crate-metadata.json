@@ -11,7 +11,9 @@
       "@id": "ro-crate-metadata.json",
       "@type": "CreativeWork",
       "identifier": "ro-crate-metadata.json",
-      "licence": "https://creativecommons.org/licenses/by/4.0/",
+      "license": {
+        "@id": "https://creativecommons.org/licenses/by/4.0/"
+      },
       "about": {
         "@id": "arcp://name,bundled"
       }
@@ -397,9 +399,6 @@
     {
       "@id": "https://github.com/Language-Research-Technology/crate-o",
       "@type": "SoftwareApplication",
-      "conformsTo": {
-        "@id": "https://w3id.org/ldac/profile#SoftwareApplication"
-      },
       "name": "Crate-O",
       "datePublished": "2026-04-11",
       "author": {

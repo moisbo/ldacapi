@@ -28,21 +28,22 @@ const dataTypeDate: PropertyMapperFn = (value) => {
 
 const location: PropertyMapperFn = (value, { properties }) => {
   const place = value as { longitude?: number | string; latitude?: number | string; geo?: unknown[] };
-  const location = []; 
+  const locations = []; 
   if (place.longitude != null && place.latitude != null) {
-    location.push({ type: 'point', coordinates: [place.longitude, place.latitude] });
+    locations.push(`POINT(${place.longitude} ${place.latitude})`); //{ type: 'point', coordinates: [place.longitude, place.latitude] }
   }
   for (const geo of place.geo || []) {
     if (typeof geo === 'string') {
-      location.push(geo);
+      locations.push(geo);
     } else if (geo.asWKT) {
-      location.push(...geo.asWKT);
+      locations.push(...geo.asWKT);
     }
   }
-  console.log('location', location);
-  // index geolocation in a separate field to support geo search, this location name is hardcoded
-  if (location.length) properties.location = location;
-  if (value['@id']) return { '@id': value['@id'] };
+  if (locations.length) {
+    properties._locations = locations;
+  }
+  //if (value['@id']) return { '@id': value['@id'], name: value.name };
+  return value.name;
 };
 
 export const dataTypeMapper: Record<string, PropertyMapperFn> = {

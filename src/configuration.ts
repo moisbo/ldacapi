@@ -11,7 +11,9 @@ try {
   log.info(`Loaded config from ${configPath}`);
   merge(config, actualConfig.default);
 } catch (error) {
-  log.error(error);
+  if (error instanceof Error && 'code' in error && error.code !== 'ERR_MODULE_NOT_FOUND') {
+    log.error(error);
+  }
 }
 
 function merge(target: any, source: any) {
