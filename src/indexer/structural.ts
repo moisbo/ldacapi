@@ -127,12 +127,24 @@ export class StructuralIndexer extends Indexer {
   }
 }
 
-function entityAsCrate(crate: ROCrate, entity: any) {
+export function entityAsCrate(crate: ROCrate, entity: any) {
   const newCrate = new ROCrate({ array: true, link: true });
+
+  if (crate['@context']) {
+    newCrate.__context = [];
+    newCrate.addContext(crate['@context']);
+  }
+
   for (const key in entity) {
     newCrate.root[key] = entity[key];
   }
-  newCrate.root['@type'].push('Dataset');
+
+  const types = Array.isArray(newCrate.root['@type']) ? newCrate.root['@type'] : [newCrate.root['@type']];
+  if (!types.includes('Dataset')) {
+    types.push('Dataset');
+  }
+  newCrate.root['@type'] = types;
+
   if (!entity.conformsTo) {
     newCrate.root.conformsTo = crate.root.conformsTo;
   }
