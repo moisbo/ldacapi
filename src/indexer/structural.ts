@@ -66,7 +66,7 @@ export class StructuralIndexer extends Indexer {
       log.debug(`Indexing ${crateId} ${entity['@id']}`);
       count++;
       const entityId = entity['@id'];
-      const rocrate = entityAsCrate(crate, entity);
+      const rocrate = entityAsCrate(crate, entity, license);
       const param = {
         entity: {
           id: entityId,
@@ -127,14 +127,17 @@ export class StructuralIndexer extends Indexer {
   }
 }
 
-function entityAsCrate(crate: ROCrate, entity: any) {
-  const newCrate = new ROCrate({ array: true, link: true });
+export function entityAsCrate(crate: ROCrate, entity: any, license: string) {
+  const newCrate = new ROCrate({'@context': crate['@context']}, { array: true, link: true });
   for (const key in entity) {
     newCrate.root[key] = entity[key];
   }
   newCrate.root['@type'].push('Dataset');
   if (!entity.conformsTo) {
     newCrate.root.conformsTo = crate.root.conformsTo;
+  }
+  if (!entity.license) {
+    newCrate.root.license = license;
   }
   return newCrate.toJSON();
 }

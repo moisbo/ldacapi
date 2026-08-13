@@ -141,3 +141,5 @@ vite.config.js.timestamp-*
 /prisma/arocapi
 
 **/.DS_Store
+
+*.config.ts

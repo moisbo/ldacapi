@@ -363,7 +363,7 @@
       "@type": "File",
       "dateModified": "2021-11-10T11:16:31+11:00",
       "description": "Test video",
-      "encodingFormat": "audio/mpeg",
+      "encodingFormat": "video/mpeg",
       "name": "Corpus of Oni Test Video",
       "contentSize": 163840,
       "editor": { "@id": "arcp://name,people/JohnSmith" }
