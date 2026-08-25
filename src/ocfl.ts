@@ -226,7 +226,7 @@ export async function getFile(entityId: string, storagePath: string) {
     const object = repository.object(crateId);
     await object.load();
     const file = object.getFile({ logicalPath: storagePath });
-    console.log(file);
+    //console.log(file);
     return {
       path: repository.objectRoot(crateId) + '/' + file.contentPath,
       stream: async () => file.stream(),

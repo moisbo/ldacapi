@@ -38,8 +38,7 @@ export async function accessTransformer(
     ...entity,
     access: {
       metadata: canAccessMetadata,
-      content: true,
-      //content: canAccessContent,
+      content: canAccessContent,
       metadataAuthorizationUrl: canAccessMetadata ? undefined : resolveEnrollmentUrl(encodeURIComponent(metadataLicenseId)),
       contentAuthorizationUrl: canAccessContent ? undefined : resolveEnrollmentUrl(encodeURIComponent(contentLicenseId)),
     },

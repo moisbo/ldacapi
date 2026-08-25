@@ -59,6 +59,7 @@ const appOpt: Options & RegisterOptions = {
     }),
   },
   prefix: config.prefix || '',
+  aggregations: config.search.aggregations,
 };
 fastify.decorateRequest('userLicenses', null);
 fastify.decorateRequest('userId', null);

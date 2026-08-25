@@ -21,12 +21,14 @@ export type LdacapiOptions = {
   disableCors?: boolean;
   accessTransformer: AccessTransformer;
   entityTransformers?: EntityTransformer[];
+  aggregations?: Record<string, unknown>;
 };
 
 let repository: Repository;
 const signatures = new Map<string, string>();
 
 const ldacapi: FastifyPluginAsync<LdacapiOptions> = async (fastify, options: LdacapiOptions) => {
+  const aggregations = Object.keys(options.aggregations || {});
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
   repository = await initRepository('ocfl', { opensearchClient: options.opensearch });
@@ -45,7 +47,20 @@ const ldacapi: FastifyPluginAsync<LdacapiOptions> = async (fastify, options: Lda
   fastify.register(admin, { prefix: '/admin', repository });
 
   fastify.get('/version', async () => ({ version }));
-
+  fastify.get('/capabilities', async () => ({
+    apiVersion: '0.0.0',
+    deposit: {
+      supported: false,
+    },
+    tombstonePolicy: '404',
+    extensions: {},
+    search: {
+      filters:
+        Object.fromEntries(aggregations.map((name) => [name, { type: 'string' }])),
+      facets:
+        Object.fromEntries(aggregations.map((name) => [name, {}])),
+    },
+  }));
   fastify.get('/dav/:crateId/*', async (request, reply) => {
     const crateId = request.params.crateId;
     const filePath = request.params['*'];
@@ -127,7 +142,7 @@ export const fileHandler: FileHandler = {
 
 
 function generateSignature(url: string) {
-  const token = crypto.randomUUID(); 
+  const token = crypto.randomUUID();
   signatures.set(token, url);
   setTimeout(() => signatures.delete(token), 60 * 1000); // expire after 1 minutes
   return token;
